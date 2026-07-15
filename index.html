@@ -63,7 +63,7 @@
             animation: float 2s ease-in-out infinite alternate;
         }
 
-        /* Corazones en 3D Dorados Rígidos (Salas 2-6) */
+        /* Corazones en 3D Dorados */
         .heart-3d-wrapper {
             width: 70px; height: 70px; cursor: pointer;
             animation: rotate3D 3.5s linear infinite;
@@ -183,7 +183,7 @@
         let currentRoomIdx = 0;
         let viewer360 = null;
 
-        // --- ENGRANAJE DE AUDIO ---
+        // --- SISTEMA DE AUDIO ---
         const bgAudio1 = new Audio("AUDIO_1.mp3");
         const bgAudio2 = new Audio("AUDIO_2.mp3");
         const bgAudio3 = new Audio("AUDIO_3.mp3");
@@ -191,7 +191,6 @@
 
         let activeBgAudio = null;
         let activeVoiceAudio = null;
-        let bgFadeInterval = null; // Guardará el temporizador activo para evitar conflictos de volumen
 
         function initMuseumTour() {
             document.getElementById("welcome-screen").style.opacity = "0";
@@ -233,7 +232,7 @@
             manageRoomAudio(room.id);
         }
 
-        // --- CONSTRUCTOR DE ELEMENTOS TRIDIMENSIONALES NATIVOS (MÉTODO PANNELLUM) ---
+        // --- CONSTRUCTOR DE ELEMENTOS TRIDIMENSIONALES NATIVOS ---
         function build3DHotspotDOM(containerDiv, args) {
             containerDiv.classList.add('custom-hotspot');
             
@@ -242,7 +241,6 @@
                 containerDiv.onclick = () => playVoiceOver("VOZ_1.ogg");
             } 
             else if (args.type === 'heart') {
-                // Modificado a degradados Dorados Cálidos 3D
                 containerDiv.innerHTML = `
                     <div class="heart-3d-wrapper">
                         <svg class="heart-3d" viewBox="0 0 32 32">
@@ -265,64 +263,49 @@
             }
         }
 
-        // --- MANEJO DE AUDIO Y TRANSICIONES ---
+        // --- MOTOR DE CONTROL ELECTRÓNICO DE AUDIO (ANTI-SOLAPAMIENTO) ---
         function manageRoomAudio(roomId) {
             let targetAudio = (roomId === 1) ? bgAudio1 : (roomId === 8) ? bgAudio3 : bgAudio2;
 
+            // Apagar instantáneamente cualquier locución activa al cambiar de sala
             if (activeVoiceAudio) { activeVoiceAudio.pause(); activeVoiceAudio = null; }
 
-            if (activeBgAudio !== targetAudio) {
-                if (activeBgAudio) fadeAudio(activeBgAudio, 0, 800, true);
-                activeBgAudio = targetAudio;
-                activeBgAudio.volume = 0;
-                activeBgAudio.play().catch(e => console.log(e));
-                fadeAudio(activeBgAudio, 1, 800, false);
-            }
+            // CORRECCIÓN SISTÉMICA: Forzar apagado de absolutamente todas las pistas ambientales inactivas
+            [bgAudio1, bgAudio2, bgAudio3].forEach(audio => {
+                if (audio !== targetAudio) {
+                    audio.pause();
+                    audio.currentTime = 0; // Resetear tracking de tiempo
+                }
+            });
 
-            // CORRECCIÓN: En la sala 8 ahora suena automáticamente VOZ_2.ogg
+            activeBgAudio = targetAudio;
+            activeBgAudio.volume = 1.0; 
+            activeBgAudio.play().catch(e => console.log("Audio retenido por navegador:", e));
+
+            // Sala 8 reproduce estrictamente VOZ_2.ogg
             if (roomId === 8) {
                 setTimeout(() => playVoiceOver("VOZ_2.ogg"), 800);
             }
         }
 
-        // SOLUCIÓN JERARQUÍA: La música ahora reduce su volumen inmediatamente sin retrasos ni conflictos
+        // AUMENTO DE FUERZA Y JERARQUÍA DE SONIDO
         function playVoiceOver(file) {
             if (activeVoiceAudio) { activeVoiceAudio.pause(); }
             
-            // Forzar detención de cualquier desvanecimiento/fade en curso para tomar control absoluto
-            clearInterval(bgFadeInterval);
-            
             activeVoiceAudio = new Audio(file);
+            activeVoiceAudio.volume = 1.0; // Pone la locución a máxima potencia
             
             if (activeBgAudio) {
-                activeBgAudio.volume = 0.10; // Baja la música de fondo instantáneamente al 10%
+                // Tira la música ambiental al suelo (2%) para darle presencia absoluta a la voz
+                activeBgAudio.volume = 0.02; 
             }
 
             activeVoiceAudio.play().catch(e => console.log(e));
             
             activeVoiceAudio.onended = () => {
-                // Al terminar la voz, restaura progresivamente el volumen de la música
-                if (activeBgAudio) fadeAudio(activeBgAudio, 1, 600, false);
+                // Restaura el sonido de fondo al terminar el mensaje
+                if (activeBgAudio) activeBgAudio.volume = 1.0;
             };
-        }
-
-        function fadeAudio(audioElement, targetVolume, duration, shouldPause) {
-            clearInterval(bgFadeInterval); // Limpia intervalos activos
-            let startVol = audioElement.volume;
-            let steps = 20;
-            let currentStep = 0;
-            let intervalTime = duration / steps;
-            let volDelta = (targetVolume - startVol) / steps;
-
-            bgFadeInterval = setInterval(() => {
-                currentStep++;
-                audioElement.volume = Math.max(0, Math.min(1, startVol + (volDelta * currentStep)));
-                if (currentStep >= steps) {
-                    clearInterval(bgFadeInterval);
-                    audioElement.volume = targetVolume;
-                    if (shouldPause) audioElement.pause();
-                }
-            }, intervalTime);
         }
 
         function navigateRoom(dir) {
@@ -362,8 +345,8 @@
 
             container.classList.add("tunnel-effect");
             
-            // Apaga el audio ambiental actual (AUDIO_3) y voces
-            if (activeBgAudio) fadeAudio(activeBgAudio, 0, 1000, true);
+            // Apagar fulminantemente el audio ambiental 3 y voces de la sala 8
+            [bgAudio2, bgAudio3].forEach(audio => { audio.pause(); audio.currentTime = 0; });
             if (activeVoiceAudio) { activeVoiceAudio.pause(); activeVoiceAudio = null; }
 
             setTimeout(() => {
@@ -371,18 +354,23 @@
                 document.getElementById("exit-interaction-container").style.display = "flex";
                 container.classList.remove("tunnel-effect");
                 
-                // CORRECCIÓN: Al cargar "Corazon", empieza a reproducirse el AUDIO_1 de inmediato
+                // CORRECCIÓN: AUDIO_1 toma el control absoluto del entorno limpio sin mezclarse
                 activeBgAudio = bgAudio1;
-                activeBgAudio.volume = 0;
+                activeBgAudio.currentTime = 0;
+                activeBgAudio.volume = 1.0;
                 activeBgAudio.play().catch(e => console.log(e));
-                fadeAudio(activeBgAudio, 1, 1000, false);
             }, 1500);
         }
 
+        // --- ACCIÓN: VOLVER AL INICIO ---
         function restartWholeTour() {
             document.getElementById("exit-interaction-container").style.display = "none";
             document.getElementById("exit-iframe").src = "";
             
+            // Limpieza total del sistema de audio antes de reconstruir el inicio
+            [bgAudio1, bgAudio2, bgAudio3].forEach(audio => { audio.pause(); audio.currentTime = 0; });
+            if (activeVoiceAudio) { activeVoiceAudio.pause(); activeVoiceAudio = null; }
+
             currentRoomIdx = 0;
             loadScene360(currentRoomIdx);
         }
