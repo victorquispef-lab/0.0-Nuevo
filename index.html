@@ -3,549 +3,375 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Museo Interactivo de Minerales</title>
+    <title>Museo 360° de Minerales e Interactivo</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
     <style>
         :root {
             --gold: #d4af37;
-            --dark-bg: #11141a;
-            --text-light: #f0f4f8;
+            --dark-bg: #090a0f;
+            --light-text: #e2e8f0;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background-color: var(--dark-bg); font-family: system-ui, sans-serif; }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--dark-bg);
-            color: var(--text-light);
-            overflow: hidden;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        /* Pantalla de Inicio (Requerida por navegadores para activar el audio con clic) */
+        /* Pantalla de Activación inicial */
         #welcome-screen {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, #202530 0%, #0a0b10 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            transition: opacity 0.8s ease;
+            background: radial-gradient(circle, #1a1f2c 0%, #050608 100%);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 1000; transition: opacity 0.6s ease, visibility 0.6s;
+        }
+        #welcome-screen h1 { color: var(--gold); font-size: 2.5rem; margin-bottom: 25px; text-align: center; }
+        .btn-universal {
+            background: linear-gradient(135deg, var(--gold) 0%, #b89224 100%);
+            color: #000; border: none; padding: 15px 40px; font-size: 1.2rem;
+            font-weight: bold; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4); transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-universal:hover { transform: scale(1.05); box-shadow: 0 6px 25px rgba(212, 175, 55, 0.6); }
+
+        /* Contenedor del Entorno 360 */
+        #panorama-container {
+            width: 100% ; height: 100%;
+            transition: transform 1.5s cubic-bezier(0.7, 0, 0.3, 1), filter 1.5s ease, opacity 1.2s ease;
         }
 
-        #welcome-screen h1 {
-            color: var(--gold);
-            font-size: 2.5rem;
-            margin-bottom: 20px;
-            text-align: center;
-            text-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
-        }
-
-        .start-btn {
-            background: linear-gradient(135deg, var(--gold) 0%, #aa841c 100%);
-            color: #000;
-            border: none;
-            padding: 15px 35px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            border-radius: 30px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .start-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.6);
-        }
-
-        /* Contenedor del Recorrido */
-        #tour-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            background-color: #000;
-            overflow: hidden;
-        }
-
-        /* Imagen de Fondo (Escenario) */
-        .scene-bg {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            object-fit: cover;
-            transition: transform 1.5s ease-in-out, filter 1.5s ease-in-out, opacity 0.8s ease;
-            z-index: 1;
-        }
-
-        /* Efecto de Túnel */
-        .tunnel-active .scene-bg {
-            transform: scale(3.5);
-            filter: blur(8px) brightness(0.2);
+        /* Animación del Efecto Túnel / Acercarse a la puerta */
+        .tunnel-effect {
+            transform: scale(6) rotate(15deg) !important;
+            filter: blur(15px) brightness(3);
             opacity: 0;
         }
 
-        .tunnel-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, transparent 20%, #000000 100%);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 1.5s ease-in-out;
-            z-index: 2;
+        /* --- BOTONES E ICONOS EN ESPACIO 3D (HOTSPOTS) --- */
+        .custom-hotspot {
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+        
+        /* Oso en Sala 1 */
+        .bear-3d {
+            font-size: 4.5rem; cursor: pointer;
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.6));
+            animation: float 2s ease-in-out infinite alternate;
         }
 
-        .tunnel-active .tunnel-overlay {
-            opacity: 1;
+        /* Corazones en 3D Rotativos (Salas 2-6) */
+        .heart-3d-wrapper {
+            width: 70px; height: 70px; cursor: pointer;
+            animation: rotate3D 3.5s linear infinite;
         }
+        .heart-3d { width: 100%; height: 100%; display: block; }
 
-        /* Interfaz y Controles */
-        .hud-panel {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            z-index: 10;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 25px;
-            border-radius: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(8px);
-        }
-
-        .nav-btn {
-            background: rgba(255, 255, 255, 0.15);
-            border: none;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background 0.2s;
-        }
-
-        .nav-btn:hover {
-            background: var(--gold);
-            color: #000;
-        }
-
-        .scene-title {
-            font-size: 1.1rem;
-            min-width: 250px;
-            text-align: center;
-            font-weight: 500;
-            letter-spacing: 1px;
-        }
-
-        /* Botones Interactivos en Escena */
-        .interactive-btn {
-            position: absolute;
-            z-index: 5;
-            cursor: pointer;
-            border: none;
-            background: none;
-            outline: none;
-            transition: transform 0.3s ease;
-            display: none; /* Se activa por JS según ambiente */
-        }
-
-        .interactive-btn:hover {
-            transform: scale(1.2);
-        }
-
-        /* Botón Osito (Ambiente 1) */
-        .osito-btn {
-            top: 55%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 5rem;
-            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5));
-        }
-
-        /* Botón Corazón (Ambientes 2 al 6) */
-        .heart-btn {
-            top: 45%;
-            left: 75%;
-            font-size: 4rem;
-            filter: drop-shadow(0 0 15px rgba(255, 50, 50, 0.8));
+        /* Botón Salida en Sala 8 */
+        .exit-3d-btn {
+            background: linear-gradient(135deg, #ff3366 0%, #cc0033 100%);
+            color: white; border: 2px solid white; padding: 12px 30px;
+            font-size: 1.3rem; font-weight: bold; border-radius: 30px; cursor: pointer;
+            box-shadow: 0 0 20px rgba(255,51,102,0.7);
             animation: pulse 1.5s infinite alternate;
         }
 
+        @keyframes rotate3D {
+            0% { transform: rotateY(0deg) scale(1); }
+            50% { transform: rotateY(180deg) scale(1.15); }
+            100% { transform: rotateY(360deg) scale(1); }
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            100% { transform: translateY(-10px); }
+        }
         @keyframes pulse {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.15); }
+            0% { transform: scale(1); box-shadow: 0 0 15px rgba(255,51,102,0.5); }
+            100% { transform: scale(1.1); box-shadow: 0 0 30px rgba(255,51,102,0.9); }
         }
 
-        /* Botón de Salida (Ambiente 8) */
-        .exit-btn {
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
-            color: white;
-            padding: 15px 40px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            border-radius: 50px;
-            box-shadow: 0 0 25px rgba(255, 75, 43, 0.6);
-            display: none;
-            border: none;
-            cursor: pointer;
-            z-index: 5;
+        /* Marco del HUD / Controles */
+        .hud-overlay {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            z-index: 500; display: flex; align-items: center; gap: 20px;
+            background: rgba(5, 7, 12, 0.75); padding: 12px 30px; border-radius: 50px;
+            backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
         }
+        .nav-btn {
+            background: rgba(255,255,255,0.1); border: none; color: #fff;
+            padding: 8px 18px; border-radius: 20px; cursor: pointer; font-weight: bold;
+        }
+        .nav-btn:hover { background: var(--gold); color: #000; }
+        .room-title { font-size: 1.1rem; color: var(--light-text); text-align: center; min-width: 280px; font-weight: 500; }
 
-        /* Visualizador de Fotos "Sobre Sitio" (Modal) */
-        #photo-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 20;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.4s ease;
+        /* Pop-up de Fotos sobre el sitio */
+        #photo-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center;
+            z-index: 900; opacity: 0; transition: opacity 0.4s ease;
         }
+        .modal-body { position: relative; max-width: 85%; max-height: 85%; }
+        .modal-body img { max-width: 100%; max-height: 80vh; border-radius: 8px; border: 3px solid var(--gold); }
+        .close-btn { position: absolute; top: -15px; right: -15px; background: var(--gold); border: none; width: 35px; height: 35px; border-radius: 50%; font-weight: bold; cursor: pointer; }
 
-        #photo-overlay.active {
-            opacity: 1;
-            pointer-events: all;
+        /* Contenedor Final "Corazon.html" con opción de regreso */
+        #exit-interaction-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2000; background: #000; display: none; flex-direction: column;
         }
-
-        .modal-content {
-            position: relative;
-            max-width: 80%;
-            max-height: 80%;
-            border: 4px solid var(--gold);
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            background: #000;
+        #exit-interaction-container iframe { width: 100%; height: 100%; border: none; }
+        .return-bar {
+            position: absolute; top: 20px; left: 20px; z-index: 2500;
         }
-
-        .modal-content img {
-            max-width: 100%;
-            max-height: 75vh;
-            display: block;
-            border-radius: 5px;
+        .btn-return {
+            background: rgba(0, 0, 0, 0.7); color: white; border: 2px solid var(--gold);
+            padding: 10px 25px; border-radius: 30px; font-weight: bold; cursor: pointer;
+            backdrop-filter: blur(5px); transition: background 0.3s;
         }
-
-        .close-modal {
-            position: absolute;
-            top: -20px; right: -20px;
-            background: var(--gold);
-            color: black;
-            border: none;
-            width: 40px; height: 40px;
-            border-radius: 50%;
-            font-weight: bold;
-            cursor: pointer;
-            font-size: 1.2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-        }
-
-        /* Pantalla HTML "Corazon" (Integrada) */
-        #corazon-frame-container {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 100;
-            background: #000;
-            display: none;
-            flex-direction: column;
-        }
-
-        #corazon-frame-container iframe {
-            width: 100%;
-            height: calc(100% - 60px);
-            border: none;
-        }
-
-        .back-to-start-bar {
-            height: 60px;
-            background: #111;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
+        .btn-return:hover { background: var(--gold); color: black; }
     </style>
 </head>
 <body>
 
-    <!-- Pantalla de Bienvenida para inicializar audio en navegadores modernos -->
     <div id="welcome-screen">
-        <h1>Museo Interactivo de Minerales</h1>
-        <button class="start-btn" onclick="startTour()">Entrar al Museo</button>
+        <h1>Recorrido 360° Museo de Minerales</h1>
+        <button class="btn-universal" onclick="initMuseumTour()">Iniciar Recorrido</button>
     </div>
 
-    <!-- Contenedor Principal del Recorrido -->
-    <div id="tour-container">
-        <!-- Efecto túnel -->
-        <div class="tunnel-overlay"></div>
+    <div id="panorama-container"></div>
 
-        <!-- Imagen del Escenario actual -->
-        <img id="scenery" class="scene-bg" src="1.png" alt="Escena del museo">
+    <div class="hud-overlay">
+        <button id="prev-btn" class="nav-btn" onclick="navigateRoom(-1)">← Anterior</button>
+        <div id="room-display" class="room-title">Cargando...</div>
+        <button id="next-btn" class="nav-btn" onclick="navigateRoom(1)">Siguiente →</button>
+    </div>
 
-        <!-- Botones Interactivos dinámicos -->
-        <button id="btn-osito" class="interactive-btn osito-btn" onclick="playWelcomeVoice()">🧸</button>
-        <button id="btn-heart" class="interactive-btn heart-btn" onclick="openPhotoPopup()">❤️</button>
-        <button id="btn-salida" class="exit-btn" onclick="triggerExitAnimation()">SALIDA</button>
-
-        <!-- Panel de Control Inferior (HUD) -->
-        <div class="hud-panel">
-            <button id="btn-prev" class="nav-btn" onclick="changeScene(-1)">Anterior</button>
-            <div id="scene-title" class="scene-title">Entrada</div>
-            <button id="btn-next" class="nav-btn" onclick="changeScene(1)">Siguiente</button>
+    <div id="photo-modal" onclick="closePhotoPopup()">
+        <div class="modal-body" onclick="event.stopPropagation()">
+            <button class="close-btn" onclick="closePhotoPopup()">✕</button>
+            <img id="target-modal-img" src="" alt="Vista previa">
         </div>
     </div>
 
-    <!-- Modal de Visualización "Sobre Sitio" -->
-    <div id="photo-overlay" onclick="closePhotoPopup()">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="close-modal" onclick="closePhotoPopup()">✕</button>
-            <img id="popup-img" src="" alt="Foto mineral de cerca">
+    <div id="exit-interaction-container">
+        <div class="return-bar">
+            <button class="btn-return" onclick="restartWholeTour()">⬅ Volver al Inicio del Museo</button>
         </div>
-    </div>
-
-    <!-- Contenedor del código HTML 'Corazon.html' e interacción final -->
-    <div id="corazon-frame-container">
-        <iframe id="corazon-iframe" src=""></iframe>
-        <div class="back-to-start-bar">
-            <button class="start-btn" style="padding: 8px 25px; font-size: 1rem;" onclick="resetTour()">Volver al Inicio</button>
-        </div>
+        <iframe id="exit-iframe" src=""></iframe>
     </div>
 
     <script>
-        // --- CONFIGURACIÓN DE LOS AMBIENTES ---
-        const environments = [
-            { id: 1, name: "Entrada", image: "1.png" },
-            { id: 2, name: "Sala de Minerales Metálicos", image: "2.png", photo: "foto_1.jpeg" },
-            { id: 3, name: "Sala de Minerales Preciosos", image: "3.png", photo: "foto_2.jpeg" },
-            { id: 4, name: "Sala de Rocas Ígneas", image: "4.png", photo: "foto_3.jpeg" },
-            { id: 5, name: "Sala de Rocas Sedimentarias", image: "5.png", photo: "foto_4.jpeg" },
-            { id: 6, name: "Sala de Rocas Metamórficas", image: "6.png", photo: "foto_5.jpeg" },
-            { id: 7, name: "Sala de Minerales Fluorescentes", image: "7.png" },
-            { id: 8, name: "Sala de Salida", image: "8.png" }
+        // --- BASE DE DATOS DE LOS AMBIENTES 360° Y SUS COORDENADAS INTERACTIVAS ---
+        const rooms = [
+            { id: 1, name: "Entrada", file: "1.png", audio: "AUDIO_1.mp3", hotspot: { type: "bear", pitch: -5, yaw: 0 } },
+            { id: 2, name: "Sala de Minerales Metálicos", file: "2.png", audio: "AUDIO_2.mp3", hotspot: { type: "heart", photo: "foto_1.jpeg", pitch: 0, yaw: 45 } },
+            { id: 3, name: "Sala de Minerales Preciosos", file: "3.png", audio: "AUDIO_2.mp3", hotspot: { type: "heart", photo: "foto_2.jpeg", pitch: 5, yaw: -30 } },
+            { id: 4, name: "Sala de Rocas Ígneas", file: "4.png", audio: "AUDIO_2.mp3", hotspot: { type: "heart", photo: "foto_3.jpeg", pitch: -10, yaw: 15 } },
+            { id: 5, name: "Sala de Rocas Sedimentarias", file: "5.png", audio: "AUDIO_2.mp3", hotspot: { type: "heart", photo: "foto_4.jpeg", pitch: 0, yaw: 60 } },
+            { id: 6, name: "Sala de Rocas Metamórficas", file: "6.png", audio: "AUDIO_2.mp3", hotspot: { type: "heart", photo: "foto_5.jpeg", pitch: 10, yaw: -45 } },
+            { id: 7, name: "Sala de Minerales Fluorescentes", file: "7.png", audio: "AUDIO_2.mp3", hotspot: null },
+            { id: 8, name: "Sala de Salida", file: "8.png", audio: "AUDIO_3.mp3", hotspot: { type: "exit", pitch: -2, yaw: 5 } }
         ];
 
-        let currentIdx = 0;
+        let currentRoomIdx = 0;
+        let viewer360 = null;
 
-        // --- SISTEMA DE AUDIO ---
-        const audioAmbient1 = new Audio("AUDIO_1.mp3");
-        const audioAmbient2 = new Audio("AUDIO_2.mp3");
-        const audioAmbient3 = new Audio("AUDIO_3.mp3");
+        // --- ENGRANAJE DE AUDIO ---
+        const bgAudio1 = new Audio("AUDIO_1.mp3");
+        const bgAudio2 = new Audio("AUDIO_2.mp3");
+        const bgAudio3 = new Audio("AUDIO_3.mp3");
+        bgAudio1.loop = bgAudio2.loop = bgAudio3.loop = true;
 
-        // Loop habilitado para las pistas de fondo
-        audioAmbient1.loop = true;
-        audioAmbient2.loop = true;
-        audioAmbient3.loop = true;
+        let activeBgAudio = null;
+        let activeVoiceAudio = null;
 
-        let activeAmbient = null;
-        let voiceOver = null;
-
-        function startTour() {
+        function initMuseumTour() {
             document.getElementById("welcome-screen").style.opacity = "0";
-            setTimeout(() => {
-                document.getElementById("welcome-screen").style.display = "none";
-            }, 800);
-            updateScene();
-        }
-
-        // --- GESTIÓN DE AUDIOAMBIENTES Y CAMBIOS ---
-        function updateAudioForScene(sceneId) {
-            let targetAmbient = null;
-
-            if (sceneId === 1) {
-                targetAmbient = audioAmbient1;
-            } else if (sceneId >= 2 && sceneId <= 7) {
-                targetAmbient = audioAmbient2;
-            } else if (sceneId === 8) {
-                targetAmbient = audioAmbient3;
-            }
-
-            // Cambiar de pista solo si el audio de destino es diferente al actual
-            if (activeAmbient !== targetAmbient) {
-                if (activeAmbient) {
-                    fadeAudioOut(activeAmbient, 1000);
-                }
-                activeAmbient = targetAmbient;
-                activeAmbient.volume = 0;
-                activeAmbient.play().catch(err => console.log("Audio play bloqueado:", err));
-                fadeAudioIn(activeAmbient, 1000);
-            }
-
-            // Gestión del auto-play de VOZ_1 en el Ambiente 8
-            if (sceneId === 8) {
-                // Pequeño retardo al entrar a la sala de salida
-                setTimeout(() => {
-                    playVoiceOverFile("VOZ_1.ogg");
-                }, 1000);
-            }
-        }
-
-        // Transiciones suaves de audio
-        function fadeAudioOut(audio, duration) {
-            let step = audio.volume / (duration / 50);
-            let interval = setInterval(() => {
-                if (audio.volume > step) {
-                    audio.volume -= step;
-                } else {
-                    audio.volume = 0;
-                    audio.pause();
-                    clearInterval(interval);
-                }
-            }, 50);
-        }
-
-        function fadeAudioIn(audio, duration) {
-            audio.volume = 0;
-            let step = 1 / (duration / 50);
-            let interval = setInterval(() => {
-                if (audio.volume < 1 - step) {
-                    audio.volume += step;
-                } else {
-                    audio.volume = 1;
-                    clearInterval(interval);
-                }
-            }, 50);
-        }
-
-        // --- JERARQUÍA DE AUDIO (DUCKING) ---
-        function playVoiceOverFile(source) {
-            // Si ya hay un audio de voz reproduciéndose, lo detenemos
-            if (voiceOver) {
-                voiceOver.pause();
-                voiceOver = null;
-            }
-
-            voiceOver = new Audio(source);
+            setTimeout(() => document.getElementById("welcome-screen").style.display = "none", 600);
             
-            // Atenuamos el sonido ambiental (Ducking)
-            if (activeAmbient) {
-                activeAmbient.volume = 0.15; 
+            // Construir e inyectar visor 360 dinámico
+            loadScene360(currentRoomIdx);
+        }
+
+        // --- RENDERIZADO E INYECCIÓN EN ESPACIO ESFÉRICO ---
+        function loadScene360(index) {
+            const room = rooms[index];
+            
+            // Si el visor ya existe, lo destruimos para limpiar la memoria del lienzo canvas
+            if (viewer360) { viewer360.destroy(); }
+
+            // Configuración del motor 360
+            let pnmConfig = {
+                "type": "equirectangular",
+                "panorama": room.file,
+                "autoLoad": true,
+                "showControls": false, // Limpio, el usuario usa arrastre y rueda del ratón
+                "hfov": 100,
+                "minHfov": 30,
+                "maxHfov": 120,
+                "hotSpots": []
+            };
+
+            // Inyección de elementos interactivos dentro del espacio esférico
+            if (room.hotspot) {
+                pnmConfig.hotSpots.push({
+                    pitch: room.hotspot.pitch,
+                    yaw: room.hotspot.yaw,
+                    type: "custom",
+                    createTooltipFunc: build3DHotspotDOM,
+                    createTooltipArgs: room.hotspot
+                });
             }
 
-            voiceOver.play().catch(err => console.log("Voz bloqueada:", err));
+            // Inicializar renderizado
+            viewer360 = pannellum.viewer('panorama-container', pnmConfig);
+            
+            // Gestionar UI y Sonidos estructurales
+            document.getElementById("room-display").textContent = `${room.id}. ${room.name}`;
+            document.getElementById("prev-btn").style.visibility = (index === 0) ? "hidden" : "visible";
+            document.getElementById("next-btn").style.visibility = (index === rooms.length - 1) ? "hidden" : "visible";
 
-            // Al finalizar el audio especial, restablecemos el volumen normal
-            voiceOver.onended = () => {
-                if (activeAmbient) {
-                    fadeAudioIn(activeAmbient, 800);
-                }
+            manageRoomAudio(room.id);
+        }
+
+        // --- CONSTRUCTOR DE ELEMENTOS TRIDIMENSIONALES NATIVOS ---
+        function build3DHotspotDOM(containerDiv, args) {
+            containerDiv.classList.add('custom-hotspot');
+            
+            if (args.type === 'bear') {
+                containerDiv.innerHTML = '<div class="bear-3d">🧸</div>';
+                containerDiv.onclick = () => playVoiceOver("VOZ_1.ogg");
+            } 
+            else if (args.type === 'heart') {
+                containerDiv.innerHTML = `
+                    <div class="heart-3d-wrapper">
+                        <svg class="heart-3d" viewBox="0 0 32 32">
+                            <defs>
+                                <radialGradient id="3dGrad" cx="35%" cy="35%" r="60%">
+                                    <stop offset="0%" stop-color="#ff6b8b"/>
+                                    <stop offset="70%" stop-color="#e60039"/>
+                                    <stop offset="100%" stop-color="#8a0022"/>
+                                </radialGradient>
+                            </defs>
+                            <path fill="url(#3dGrad)" d="M16,28.261c-0.53,0-1.039-0.211-1.414-0.586L4.747,17.836C1.488,14.577,1.488,9.256,4.747,5.996 c3.141-3.141,8.197-3.254,11.474-0.305l0.385,0.347l0.385-0.347c3.229-2.903,8.312-2.839,11.474,0.305 c3.259,3.259,3.259,8.581,0,11.84L17.414,27.675C17.039,28.05,16.53,28.261,16,28.261z"/>
+                        </svg>
+                    </div>`;
+                containerDiv.onclick = () => openPhotoPopup(args.photo);
+            } 
+            else if (args.type === 'exit') {
+                containerDiv.innerHTML = '<button class="exit-3d-btn">SALIDA 🚪</button>';
+                containerDiv.onclick = triggerImmersiveTunnel;
+            }
+        }
+
+        // --- LÓGICA DE AUDIO Y DUCHING SUAVE ---
+        function manageRoomAudio(roomId) {
+            let targetAudio = (roomId === 1) ? bgAudio1 : (roomId === 8) ? bgAudio3 : bgAudio2;
+
+            if (activeVoiceAudio) { activeVoiceAudio.pause(); activeVoiceAudio = null; }
+
+            if (activeBgAudio !== targetAudio) {
+                if (activeBgAudio) fadeAudio(activeBgAudio, 0, 800, true);
+                activeBgAudio = targetAudio;
+                activeBgAudio.volume = 0;
+                activeBgAudio.play().catch(e => console.log(e));
+                fadeAudio(activeBgAudio, 1, 800, false);
+            }
+
+            if (roomId === 8) {
+                setTimeout(() => playVoiceOver("VOZ_1.ogg"), 800);
+            }
+        }
+
+        function playVoiceOver(file) {
+            if (activeVoiceAudio) { activeVoiceAudio.pause(); }
+            
+            activeVoiceAudio = new Audio(file);
+            if (activeBgAudio) activeBgAudio.volume = 0.15; // Atenuar música de fondo automáticamente
+
+            activeVoiceAudio.play().catch(e => console.log(e));
+            
+            activeVoiceAudio.onended = () => {
+                if (activeBgAudio) fadeAudio(activeBgAudio, 1, 500, false);
             };
         }
 
-        function playWelcomeVoice() {
-            playVoiceOverFile("VOZ_1.ogg");
+        function fadeAudio(audioElement, targetVolume, duration, shouldPause) {
+            let startVol = audioElement.volume;
+            let steps = 20;
+            let currentStep = 0;
+            let intervalTime = duration / steps;
+            let volDelta = (targetVolume - startVol) / steps;
+
+            let timer = setInterval(() => {
+                currentStep++;
+                audioElement.volume = Math.max(0, Math.min(1, startVol + (volDelta * currentStep)));
+                if (currentStep >= steps) {
+                    clearInterval(timer);
+                    audioElement.volume = targetVolume;
+                    if (shouldPause) audioElement.pause();
+                }
+            }, intervalTime);
         }
 
-        // --- CONTROL DE ESCENAS ---
-        function changeScene(direction) {
-            let newIdx = currentIdx + direction;
-            if (newIdx >= 0 && newIdx < environments.length) {
-                currentIdx = newIdx;
-                updateScene();
+        // --- MENÚ HUD DE NAVEGACIÓN ---
+        function navigateRoom(dir) {
+            let nextIdx = currentRoomIdx + dir;
+            if (nextIdx >= 0 && nextIdx < rooms.length) {
+                currentRoomIdx = nextIdx;
+                loadScene360(currentRoomIdx);
             }
         }
 
-        function updateScene() {
-            const currentScene = environments[currentIdx];
-
-            // Detener cualquier voz en off activa al cambiar de sala
-            if (voiceOver) {
-                voiceOver.pause();
-                voiceOver = null;
-            }
-
-            // Actualizar interfaz gráfica (Imagen y textos)
-            document.getElementById("scenery").src = currentScene.image;
-            document.getElementById("scene-title").textContent = `${currentScene.id}. ${currentScene.name}`;
-
-            // Control de visibilidad de botones de navegación estándar
-            document.getElementById("btn-prev").style.visibility = (currentIdx === 0) ? "hidden" : "visible";
-            document.getElementById("btn-next").style.visibility = (currentIdx === environments.length - 1) ? "hidden" : "visible";
-
-            // Activar botón del Osito solo en Ambiente 1
-            document.getElementById("btn-osito").style.display = (currentScene.id === 1) ? "block" : "none";
-
-            // Activar botón Corazón de fotos según corresponda (Ambientes 2 al 6)
-            const heartBtn = document.getElementById("btn-heart");
-            if (currentScene.photo) {
-                heartBtn.style.display = "block";
-            } else {
-                heartBtn.style.display = "none";
-            }
-
-            // Activar botón de Salida solo en Ambiente 8
-            document.getElementById("btn-salida").style.display = (currentScene.id === 8) ? "block" : "none";
-
-            // Gestionar la lógica de la música ambiental
-            updateAudioForScene(currentScene.id);
-        }
-
-        // --- SISTEMA EMERgente "SOBRE SITIO" (FOTOS) ---
-        function openPhotoPopup() {
-            const currentScene = environments[currentIdx];
-            if (currentScene.photo) {
-                const popupImg = document.getElementById("popup-img");
-                popupImg.src = currentScene.photo;
-                document.getElementById("photo-overlay").classList.add("active");
-            }
+        // --- MODAL DE IMÁGENES SOBRE EL SITIO ---
+        function openPhotoPopup(imageSrc) {
+            const modal = document.getElementById("photo-modal");
+            document.getElementById("target-modal-img").src = imageSrc;
+            modal.style.display = "flex";
+            setTimeout(() => modal.style.opacity = "1", 10);
         }
 
         function closePhotoPopup() {
-            document.getElementById("photo-overlay").classList.remove("active");
+            const modal = document.getElementById("photo-modal");
+            modal.style.opacity = "0";
+            setTimeout(() => modal.style.display = "none", 400);
         }
 
-        // --- INTERACCIÓN FINAL DE SALIDA (EFECTO TÚNEL) ---
-        function triggerExitAnimation() {
-            const container = document.getElementById("tour-container");
+        // --- EFECTO TÚNEL AVANZADO 360 Y LANZAMIENTO HTML ---
+        function triggerImmersiveTunnel() {
+            const container = document.getElementById("panorama-container");
             
-            // Iniciamos animación agregando clase de zoom y blur
-            container.classList.add("tunnel-active");
+            // 1. Zoom óptico simulado al modificar el campo de visión del visor (Fov) hacia adentro muy rápido
+            let currentFov = viewer360.getHfov();
+            let zoomInterval = setInterval(() => {
+                if (currentFov > 32) {
+                    currentFov -= 4;
+                    viewer360.setHfov(currentFov);
+                } else {
+                    clearInterval(zoomInterval);
+                }
+            }, 30);
 
-            // Pasado el tiempo de transición (1.5 segundos), cargamos el iframe de Corazon.html
+            // 2. Transición CSS de escala masiva y desenfoque (Efecto pasar un túnel hacia la puerta)
+            container.classList.add("tunnel-effect");
+            if (activeBgAudio) fadeAudio(activeBgAudio, 0, 1400, true);
+
+            // 3. Cargar la vista interactiva final
             setTimeout(() => {
-                const iframe = document.getElementById("corazon-iframe");
-                iframe.src = "Corazon.html"; // Carga el archivo local de código HTML solicitado
-                
-                document.getElementById("corazon-frame-container").style.display = "flex";
-                
-                // Limpiamos la transición del recorrido
-                container.classList.remove("tunnel-active");
+                document.getElementById("exit-iframe").src = "Corazon.html";
+                document.getElementById("exit-interaction-container").style.display = "flex";
+                container.classList.remove("tunnel-effect");
             }, 1500);
         }
 
-        // --- OPCIÓN DE VOLVER AL INICIO ---
-        function resetTour() {
-            // Apagar pantallas de salida e iframe
-            document.getElementById("corazon-frame-container").style.display = "none";
-            document.getElementById("corazon-iframe").src = "";
-
-            // Detener audios activos
-            if (activeAmbient) {
-                activeAmbient.pause();
-                activeAmbient = null;
-            }
-            if (voiceOver) {
-                voiceOver.pause();
-                voiceOver = null;
-            }
-
-            // Reestablecer recorrido desde el ambiente 1
-            currentIdx = 0;
-            updateScene();
+        // --- ACCIÓN: VOLVER AL INICIO ---
+        function restartWholeTour() {
+            document.getElementById("exit-interaction-container").style.display = "none";
+            document.getElementById("exit-iframe").src = "";
+            
+            currentRoomIdx = 0;
+            loadScene360(currentRoomIdx);
         }
     </script>
 </body>
