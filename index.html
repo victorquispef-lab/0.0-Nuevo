@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Museo 360° de Minerales e Interactivo</title>
     
+    <!-- Librería del Visor 360 Real (Pannellum) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
     <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
 
     <style>
         :root {
             --gold: #d4af37;
-            --dark-bg: #090a0f;
+            --warm-amber: #ff9f43;
+            --dark-bg: #050608;
             --light-text: #e2e8f0;
         }
 
@@ -37,14 +39,14 @@
 
         /* Contenedor del Entorno 360 */
         #panorama-container {
-            width: 100% ; height: 100%;
+            width: 100%; height: 100%;
             transition: transform 1.5s cubic-bezier(0.7, 0, 0.3, 1), filter 1.5s ease, opacity 1.2s ease;
         }
 
-        /* Animación del Efecto Túnel / Acercarse a la puerta */
+        /* Animación del Efecto Túnel */
         .tunnel-effect {
             transform: scale(6) rotate(15deg) !important;
-            filter: blur(15px) brightness(3);
+            filter: blur(15px) brightness(2.5);
             opacity: 0;
         }
 
@@ -61,19 +63,20 @@
             animation: float 2s ease-in-out infinite alternate;
         }
 
-        /* Corazones en 3D Rotativos (Salas 2-6) */
+        /* Corazones en 3D Dorados Rígidos (Salas 2-6) */
         .heart-3d-wrapper {
             width: 70px; height: 70px; cursor: pointer;
             animation: rotate3D 3.5s linear infinite;
         }
         .heart-3d { width: 100%; height: 100%; display: block; }
 
-        /* Botón Salida en Sala 8 */
+        /* Botón Salida Cálido en Sala 8 */
         .exit-3d-btn {
-            background: linear-gradient(135deg, #ff3366 0%, #cc0033 100%);
-            color: white; border: 2px solid white; padding: 12px 30px;
-            font-size: 1.3rem; font-weight: bold; border-radius: 30px; cursor: pointer;
-            box-shadow: 0 0 20px rgba(255,51,102,0.7);
+            background: linear-gradient(135deg, var(--warm-amber) 0%, var(--gold) 100%);
+            color: #111; border: 2px solid white; padding: 14px 35px;
+            font-size: 1.4rem; font-weight: 800; border-radius: 35px; cursor: pointer;
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.7);
+            text-shadow: 0 1px 2px rgba(255,255,255,0.4);
             animation: pulse 1.5s infinite alternate;
         }
 
@@ -87,15 +90,15 @@
             100% { transform: translateY(-10px); }
         }
         @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 15px rgba(255,51,102,0.5); }
-            100% { transform: scale(1.1); box-shadow: 0 0 30px rgba(255,51,102,0.9); }
+            0% { transform: scale(1); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
+            100% { transform: scale(1.08); box-shadow: 0 0 35px rgba(255, 159, 67, 0.9); }
         }
 
-        /* Marco del HUD / Controles */
+        /* Controles HUD */
         .hud-overlay {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
             z-index: 500; display: flex; align-items: center; gap: 20px;
-            background: rgba(5, 7, 12, 0.75); padding: 12px 30px; border-radius: 50px;
+            background: rgba(5, 7, 12, 0.85); padding: 12px 30px; border-radius: 50px;
             backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);
         }
         .nav-btn {
@@ -121,32 +124,34 @@
             z-index: 2000; background: #000; display: none; flex-direction: column;
         }
         #exit-interaction-container iframe { width: 100%; height: 100%; border: none; }
-        .return-bar {
-            position: absolute; top: 20px; left: 20px; z-index: 2500;
-        }
+        .return-bar { position: absolute; top: 20px; left: 20px; z-index: 2500; }
         .btn-return {
-            background: rgba(0, 0, 0, 0.7); color: white; border: 2px solid var(--gold);
+            background: rgba(0, 0, 0, 0.8); color: white; border: 2px solid var(--gold);
             padding: 10px 25px; border-radius: 30px; font-weight: bold; cursor: pointer;
-            backdrop-filter: blur(5px); transition: background 0.3s;
+            backdrop-filter: blur(5px); transition: all 0.3s;
         }
-        .btn-return:hover { background: var(--gold); color: black; }
+        .btn-return:hover { background: var(--gold); color: black; box-shadow: 0 0 15px var(--gold); }
     </style>
 </head>
 <body>
 
+    <!-- Pantalla de Bienvenida (Desbloqueo de Audio) -->
     <div id="welcome-screen">
         <h1>Recorrido 360° Museo de Minerales</h1>
         <button class="btn-universal" onclick="initMuseumTour()">Iniciar Recorrido</button>
     </div>
 
+    <!-- Visor 360 Interactuable -->
     <div id="panorama-container"></div>
 
+    <!-- Controles HUD -->
     <div class="hud-overlay">
         <button id="prev-btn" class="nav-btn" onclick="navigateRoom(-1)">← Anterior</button>
         <div id="room-display" class="room-title">Cargando...</div>
         <button id="next-btn" class="nav-btn" onclick="navigateRoom(1)">Siguiente →</button>
     </div>
 
+    <!-- Ventana Emergente de Fotos Minerales -->
     <div id="photo-modal" onclick="closePhotoPopup()">
         <div class="modal-body" onclick="event.stopPropagation()">
             <button class="close-btn" onclick="closePhotoPopup()">✕</button>
@@ -154,6 +159,7 @@
         </div>
     </div>
 
+    <!-- Vista Exclusiva del código Corazon.html con Retorno Integrado -->
     <div id="exit-interaction-container">
         <div class="return-bar">
             <button class="btn-return" onclick="restartWholeTour()">⬅ Volver al Inicio del Museo</button>
@@ -162,16 +168,16 @@
     </div>
 
     <script>
-        // --- BASE DE DATOS DE LOS AMBIENTES 360° Y SUS COORDENADAS INTERACTIVAS ---
+        // --- BASE DE DATOS DE LOS AMBIENTES ---
         const rooms = [
-            { id: 1, name: "Entrada", file: "1.png", audio: "AUDIO_1.mp3", hotspot: { type: "bear", pitch: -5, yaw: 0 } },
-            { id: 2, name: "Sala de Minerales Metálicos", file: "2.png", audio: "AUDIO_2.mp3", hotspot: { type: "heart", photo: "foto_1.jpeg", pitch: 0, yaw: 45 } },
-            { id: 3, name: "Sala de Minerales Preciosos", file: "3.png", audio: "AUDIO_2.mp3", hotspot: { type: "heart", photo: "foto_2.jpeg", pitch: 5, yaw: -30 } },
-            { id: 4, name: "Sala de Rocas Ígneas", file: "4.png", audio: "AUDIO_2.mp3", hotspot: { type: "heart", photo: "foto_3.jpeg", pitch: -10, yaw: 15 } },
-            { id: 5, name: "Sala de Rocas Sedimentarias", file: "5.png", audio: "AUDIO_2.mp3", hotspot: { type: "heart", photo: "foto_4.jpeg", pitch: 0, yaw: 60 } },
-            { id: 6, name: "Sala de Rocas Metamórficas", file: "6.png", audio: "AUDIO_2.mp3", hotspot: { type: "heart", photo: "foto_5.jpeg", pitch: 10, yaw: -45 } },
-            { id: 7, name: "Sala de Minerales Fluorescentes", file: "7.png", audio: "AUDIO_2.mp3", hotspot: null },
-            { id: 8, name: "Sala de Salida", file: "8.png", audio: "AUDIO_3.mp3", hotspot: { type: "exit", pitch: -2, yaw: 5 } }
+            { id: 1, name: "Entrada", file: "1.png", hotspot: { type: "bear", pitch: -5, yaw: 0 } },
+            { id: 2, name: "Sala de Minerales Metálicos", file: "2.png", hotspot: { type: "heart", photo: "foto_1.jpeg", pitch: 0, yaw: 45 } },
+            { id: 3, name: "Sala de Minerales Preciosos", file: "3.png", hotspot: { type: "heart", photo: "foto_2.jpeg", pitch: 5, yaw: -30 } },
+            { id: 4, name: "Sala de Rocas Ígneas", file: "4.png", hotspot: { type: "heart", photo: "foto_3.jpeg", pitch: -10, yaw: 15 } },
+            { id: 5, name: "Sala de Rocas Sedimentarias", file: "5.png", hotspot: { type: "heart", photo: "foto_4.jpeg", pitch: 0, yaw: 60 } },
+            { id: 6, name: "Sala de Rocas Metamórficas", file: "6.png", hotspot: { type: "heart", photo: "foto_5.jpeg", pitch: 10, yaw: -45 } },
+            { id: 7, name: "Sala de Minerales Fluorescentes", file: "7.png", hotspot: null },
+            { id: 8, name: "Sala de Salida", file: "8.png", hotspot: { type: "exit", pitch: -2, yaw: 5 } }
         ];
 
         let currentRoomIdx = 0;
@@ -185,35 +191,29 @@
 
         let activeBgAudio = null;
         let activeVoiceAudio = null;
+        let bgFadeInterval = null; // Guardará el temporizador activo para evitar conflictos de volumen
 
         function initMuseumTour() {
             document.getElementById("welcome-screen").style.opacity = "0";
             setTimeout(() => document.getElementById("welcome-screen").style.display = "none", 600);
-            
-            // Construir e inyectar visor 360 dinámico
             loadScene360(currentRoomIdx);
         }
 
-        // --- RENDERIZADO E INYECCIÓN EN ESPACIO ESFÉRICO ---
         function loadScene360(index) {
             const room = rooms[index];
-            
-            // Si el visor ya existe, lo destruimos para limpiar la memoria del lienzo canvas
             if (viewer360) { viewer360.destroy(); }
 
-            // Configuración del motor 360
             let pnmConfig = {
                 "type": "equirectangular",
                 "panorama": room.file,
                 "autoLoad": true,
-                "showControls": false, // Limpio, el usuario usa arrastre y rueda del ratón
+                "showControls": false,
                 "hfov": 100,
                 "minHfov": 30,
                 "maxHfov": 120,
                 "hotSpots": []
             };
 
-            // Inyección de elementos interactivos dentro del espacio esférico
             if (room.hotspot) {
                 pnmConfig.hotSpots.push({
                     pitch: room.hotspot.pitch,
@@ -224,10 +224,8 @@
                 });
             }
 
-            // Inicializar renderizado
             viewer360 = pannellum.viewer('panorama-container', pnmConfig);
             
-            // Gestionar UI y Sonidos estructurales
             document.getElementById("room-display").textContent = `${room.id}. ${room.name}`;
             document.getElementById("prev-btn").style.visibility = (index === 0) ? "hidden" : "visible";
             document.getElementById("next-btn").style.visibility = (index === rooms.length - 1) ? "hidden" : "visible";
@@ -235,7 +233,7 @@
             manageRoomAudio(room.id);
         }
 
-        // --- CONSTRUCTOR DE ELEMENTOS TRIDIMENSIONALES NATIVOS ---
+        // --- CONSTRUCTOR DE ELEMENTOS TRIDIMENSIONALES NATIVOS (MÉTODO PANNELLUM) ---
         function build3DHotspotDOM(containerDiv, args) {
             containerDiv.classList.add('custom-hotspot');
             
@@ -244,17 +242,19 @@
                 containerDiv.onclick = () => playVoiceOver("VOZ_1.ogg");
             } 
             else if (args.type === 'heart') {
+                // Modificado a degradados Dorados Cálidos 3D
                 containerDiv.innerHTML = `
                     <div class="heart-3d-wrapper">
                         <svg class="heart-3d" viewBox="0 0 32 32">
                             <defs>
-                                <radialGradient id="3dGrad" cx="35%" cy="35%" r="60%">
-                                    <stop offset="0%" stop-color="#ff6b8b"/>
-                                    <stop offset="70%" stop-color="#e60039"/>
-                                    <stop offset="100%" stop-color="#8a0022"/>
+                                <radialGradient id="gold3dGrad" cx="35%" cy="35%" r="60%">
+                                    <stop offset="0%" stop-color="#fff3cc"/>
+                                    <stop offset="40%" stop-color="#d4af37"/>
+                                    <stop offset="85%" stop-color="#aa841c"/>
+                                    <stop offset="100%" stop-color="#5c450b"/>
                                 </radialGradient>
                             </defs>
-                            <path fill="url(#3dGrad)" d="M16,28.261c-0.53,0-1.039-0.211-1.414-0.586L4.747,17.836C1.488,14.577,1.488,9.256,4.747,5.996 c3.141-3.141,8.197-3.254,11.474-0.305l0.385,0.347l0.385-0.347c3.229-2.903,8.312-2.839,11.474,0.305 c3.259,3.259,3.259,8.581,0,11.84L17.414,27.675C17.039,28.05,16.53,28.261,16,28.261z"/>
+                            <path fill="url(#gold3dGrad)" d="M16,28.261c-0.53,0-1.039-0.211-1.414-0.586L4.747,17.836C1.488,14.577,1.488,9.256,4.747,5.996 c3.141-3.141,8.197-3.254,11.474-0.305l0.385,0.347l0.385-0.347c3.229-2.903,8.312-2.839,11.474,0.305 c3.259,3.259,3.259,8.581,0,11.84L17.414,27.675C17.039,28.05,16.53,28.261,16,28.261z"/>
                         </svg>
                     </div>`;
                 containerDiv.onclick = () => openPhotoPopup(args.photo);
@@ -265,7 +265,7 @@
             }
         }
 
-        // --- LÓGICA DE AUDIO Y DUCHING SUAVE ---
+        // --- MANEJO DE AUDIO Y TRANSICIONES ---
         function manageRoomAudio(roomId) {
             let targetAudio = (roomId === 1) ? bgAudio1 : (roomId === 8) ? bgAudio3 : bgAudio2;
 
@@ -279,43 +279,52 @@
                 fadeAudio(activeBgAudio, 1, 800, false);
             }
 
+            // CORRECCIÓN: En la sala 8 ahora suena automáticamente VOZ_2.ogg
             if (roomId === 8) {
-                setTimeout(() => playVoiceOver("VOZ_1.ogg"), 800);
+                setTimeout(() => playVoiceOver("VOZ_2.ogg"), 800);
             }
         }
 
+        // SOLUCIÓN JERARQUÍA: La música ahora reduce su volumen inmediatamente sin retrasos ni conflictos
         function playVoiceOver(file) {
             if (activeVoiceAudio) { activeVoiceAudio.pause(); }
             
+            // Forzar detención de cualquier desvanecimiento/fade en curso para tomar control absoluto
+            clearInterval(bgFadeInterval);
+            
             activeVoiceAudio = new Audio(file);
-            if (activeBgAudio) activeBgAudio.volume = 0.15; // Atenuar música de fondo automáticamente
+            
+            if (activeBgAudio) {
+                activeBgAudio.volume = 0.10; // Baja la música de fondo instantáneamente al 10%
+            }
 
             activeVoiceAudio.play().catch(e => console.log(e));
             
             activeVoiceAudio.onended = () => {
-                if (activeBgAudio) fadeAudio(activeBgAudio, 1, 500, false);
+                // Al terminar la voz, restaura progresivamente el volumen de la música
+                if (activeBgAudio) fadeAudio(activeBgAudio, 1, 600, false);
             };
         }
 
         function fadeAudio(audioElement, targetVolume, duration, shouldPause) {
+            clearInterval(bgFadeInterval); // Limpia intervalos activos
             let startVol = audioElement.volume;
             let steps = 20;
             let currentStep = 0;
             let intervalTime = duration / steps;
             let volDelta = (targetVolume - startVol) / steps;
 
-            let timer = setInterval(() => {
+            bgFadeInterval = setInterval(() => {
                 currentStep++;
                 audioElement.volume = Math.max(0, Math.min(1, startVol + (volDelta * currentStep)));
                 if (currentStep >= steps) {
-                    clearInterval(timer);
+                    clearInterval(bgFadeInterval);
                     audioElement.volume = targetVolume;
                     if (shouldPause) audioElement.pause();
                 }
             }, intervalTime);
         }
 
-        // --- MENÚ HUD DE NAVEGACIÓN ---
         function navigateRoom(dir) {
             let nextIdx = currentRoomIdx + dir;
             if (nextIdx >= 0 && nextIdx < rooms.length) {
@@ -324,7 +333,6 @@
             }
         }
 
-        // --- MODAL DE IMÁGENES SOBRE EL SITIO ---
         function openPhotoPopup(imageSrc) {
             const modal = document.getElementById("photo-modal");
             document.getElementById("target-modal-img").src = imageSrc;
@@ -338,11 +346,10 @@
             setTimeout(() => modal.style.display = "none", 400);
         }
 
-        // --- EFECTO TÚNEL AVANZADO 360 Y LANZAMIENTO HTML ---
+        // --- EFECTO TÚNEL E INYECCIÓN DE AUDIO_1 AL FINAL ---
         function triggerImmersiveTunnel() {
             const container = document.getElementById("panorama-container");
             
-            // 1. Zoom óptico simulado al modificar el campo de visión del visor (Fov) hacia adentro muy rápido
             let currentFov = viewer360.getHfov();
             let zoomInterval = setInterval(() => {
                 if (currentFov > 32) {
@@ -353,19 +360,25 @@
                 }
             }, 30);
 
-            // 2. Transición CSS de escala masiva y desenfoque (Efecto pasar un túnel hacia la puerta)
             container.classList.add("tunnel-effect");
-            if (activeBgAudio) fadeAudio(activeBgAudio, 0, 1400, true);
+            
+            // Apaga el audio ambiental actual (AUDIO_3) y voces
+            if (activeBgAudio) fadeAudio(activeBgAudio, 0, 1000, true);
+            if (activeVoiceAudio) { activeVoiceAudio.pause(); activeVoiceAudio = null; }
 
-            // 3. Cargar la vista interactiva final
             setTimeout(() => {
                 document.getElementById("exit-iframe").src = "Corazon.html";
                 document.getElementById("exit-interaction-container").style.display = "flex";
                 container.classList.remove("tunnel-effect");
+                
+                // CORRECCIÓN: Al cargar "Corazon", empieza a reproducirse el AUDIO_1 de inmediato
+                activeBgAudio = bgAudio1;
+                activeBgAudio.volume = 0;
+                activeBgAudio.play().catch(e => console.log(e));
+                fadeAudio(activeBgAudio, 1, 1000, false);
             }, 1500);
         }
 
-        // --- ACCIÓN: VOLVER AL INICIO ---
         function restartWholeTour() {
             document.getElementById("exit-interaction-container").style.display = "none";
             document.getElementById("exit-iframe").src = "";
