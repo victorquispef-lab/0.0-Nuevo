@@ -183,7 +183,7 @@
         let currentRoomIdx = 0;
         let viewer360 = null;
 
-        // --- SISTEMA DE AUDIO ---
+        // --- SISTEMA DE AUDIO ORIGINAL ---
         const bgAudio1 = new Audio("AUDIO_1.mp3");
         const bgAudio2 = new Audio("AUDIO_2.mp3");
         const bgAudio3 = new Audio("AUDIO_3.mp3");
@@ -192,7 +192,51 @@
         let activeBgAudio = null;
         let activeVoiceAudio = null;
 
+        // --- NUEVAS VARIABLES DE CONTROL DE AMPLIFICACIÓN MÓVIL (Web Audio API) ---
+        let audioCtx = null;
+        let bgGainNode = null;
+        let voiceGainNode = null;
+
+        // --- MOTOR DE INICIALIZACIÓN DE AUDIO AMPLIFICADO ---
+        function initAudioSystem() {
+            if (audioCtx) return; // Evitar inicializaciones duplicadas
+
+            try {
+                // Crear el contexto de audio unificado para móviles y ordenadores
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+                // 1. Amplificador para música de fondo (ligera ganancia para mantener el equilibrio)
+                bgGainNode = audioCtx.createGain();
+                bgGainNode.gain.value = 1.2; 
+                bgGainNode.connect(audioCtx.destination);
+
+                // 2. Amplificador potente para las locuciones (Voz 1 y Voz 2)
+                voiceGainNode = audioCtx.createGain();
+                voiceGainNode.gain.value = 2.8; // Multiplica la potencia de la voz por 2.8x en celulares
+                voiceGainNode.connect(audioCtx.destination);
+
+                // Conectar físicamente las pistas de fondo al nodo amplificador de música
+                const source1 = audioCtx.createMediaElementSource(bgAudio1);
+                source1.connect(bgGainNode);
+
+                const source2 = audioCtx.createMediaElementSource(bgAudio2);
+                source2.connect(bgGainNode);
+
+                const source3 = audioCtx.createMediaElementSource(bgAudio3);
+                source3.connect(bgGainNode);
+
+            } catch (e) {
+                console.warn("Web Audio API no es soportado en este navegador. El audio se reproducirá de forma estándar.", e);
+            }
+        }
+
         function initMuseumTour() {
+            // Inicializar el amplificador digital en la primera interacción segura
+            initAudioSystem();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
             document.getElementById("welcome-screen").style.opacity = "0";
             setTimeout(() => document.getElementById("welcome-screen").style.display = "none", 600);
             loadScene360(currentRoomIdx);
@@ -265,6 +309,11 @@
 
         // --- MOTOR DE CONTROL ELECTRÓNICO DE AUDIO (ANTI-SOLAPAMIENTO) ---
         function manageRoomAudio(roomId) {
+            // Asegurar que el contexto de audio móvil esté despierto en transiciones
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
             let targetAudio = (roomId === 1) ? bgAudio1 : (roomId === 8) ? bgAudio3 : bgAudio2;
 
             // Apagar instantáneamente cualquier locución activa al cambiar de sala
@@ -288,19 +337,35 @@
             }
         }
 
-        // AUMENTO DE FUERZA Y JERARQUÍA DE SONIDO
+        // AUMENTO DE FUERZA Y JERARQUÍA DE SONIDO CON CONTROLADORES WEB AUDIO (ANTI-MUTE EN MÓVILES)
         function playVoiceOver(file) {
+            // Despertar contexto de audio
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
             if (activeVoiceAudio) { activeVoiceAudio.pause(); }
             
+            // Instanciar nueva pista de voz
             activeVoiceAudio = new Audio(file);
-            activeVoiceAudio.volume = 1.0; // Pone la locución a máxima potencia
+            activeVoiceAudio.volume = 1.0; // Potencia máxima de salida nativa
+            
+            // Conectar la nueva voz de forma dinámica a través del amplificador GainNode
+            if (audioCtx && voiceGainNode) {
+                try {
+                    const voiceSource = audioCtx.createMediaElementSource(activeVoiceAudio);
+                    voiceSource.connect(voiceGainNode);
+                } catch (e) {
+                    console.warn("No se pudo rutear el audio dinámico a través de la Web Audio API:", e);
+                }
+            }
             
             if (activeBgAudio) {
-                // Tira la música ambiental al suelo (2%) para darle presencia absoluta a la voz
+                // Tira la música ambiental al suelo (2%) para darle presencia absoluta a la voz amplificada
                 activeBgAudio.volume = 0.02; 
             }
 
-            activeVoiceAudio.play().catch(e => console.log(e));
+            activeVoiceAudio.play().catch(e => console.log("Permiso de reproducción móvil denegado:", e));
             
             activeVoiceAudio.onended = () => {
                 // Restaura el sonido de fondo al terminar el mensaje
@@ -331,6 +396,10 @@
 
         // --- EFECTO TÚNEL E INYECCIÓN DE AUDIO_1 AL FINAL ---
         function triggerImmersiveTunnel() {
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
             const container = document.getElementById("panorama-container");
             
             let currentFov = viewer360.getHfov();
